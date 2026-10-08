@@ -1,90 +1,104 @@
-from tkinter import *
+"""A small Tkinter application for converting common length units."""
 
-root = Tk()
-root.title("Unit Converter")
+import tkinter as tk
+from tkinter import messagebox
 
-Units = ['meter' , 'foot' , 'yard' , 'inch']
-menu = StringVar()
-menu.set("From")
 
-dropmenu1 = OptionMenu(root , menu , *Units)
-dropmenu1.grid(row=1 , column=1)
+UNITS_IN_METERS = {
+    "meter": 1.0,
+    "foot": 0.3048,
+    "yard": 0.9144,
+    "inch": 0.0254,
+}
 
-menu2 = StringVar()
-menu2.set("To")
 
-dropmenu2 = OptionMenu(root , menu2 , *Units)
-dropmenu2.grid(row=1, column=2)
+def convert_length(value, from_unit, to_unit):
+    """Convert a numeric length between two supported units."""
+    if from_unit not in UNITS_IN_METERS:
+        raise ValueError(f"Unsupported source unit: {from_unit}")
+    if to_unit not in UNITS_IN_METERS:
+        raise ValueError(f"Unsupported destination unit: {to_unit}")
 
-input = Entry(root,font=(20))
-input.grid(row=2, column=1)
+    value_in_meters = float(value) * UNITS_IN_METERS[from_unit]
+    return value_in_meters / UNITS_IN_METERS[to_unit]
 
-output = Label(root,width = 20,borderwidth=3 , relief="solid")
-output.grid(row=2, column=2)
 
-def Clear():
-    input.delete(0,"end")
-    output.config(text = "")
+class UnitConverterApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Length Unit Converter")
+        self.root.resizable(False, False)
 
-def Convert():
-    
-    unit1 = menu.get()
-    unit2 = menu2.get()
+        self.from_unit = tk.StringVar(value="meter")
+        self.to_unit = tk.StringVar(value="foot")
+        self.input_value = tk.StringVar()
+        self.output_value = tk.StringVar(value="—")
 
-    try:
-        num = float(input.get())
-        converted_num = num
-        if unit1 == 'meter' and unit2 == 'foot':
-            converted_num = num*3.281
+        self._build_layout()
 
-        elif unit1 == 'meter' and unit2 == 'yard':
-            converted_num = num*1.094
-        
-        elif unit1 == 'meter' and unit2 == 'inch':
-            converted_num = num*39.37
-            
-        elif unit1 == 'foot' and unit2 == 'meter':
-            converted_num = num/3.281
-            
-        elif unit1 == 'foot' and unit2 == 'yard':
-            converted_num = num/3
-        
-        elif unit1 == 'foot' and unit2 == 'inch':
-            converted_num = num*12
+    def _build_layout(self):
+        container = tk.Frame(self.root, padx=16, pady=16)
+        container.grid(row=0, column=0)
 
-        elif unit1 == 'yard' and unit2 == 'meter':
-            converted_num = num/1.094
-            
-        elif unit1 == 'yard' and unit2 == 'foot':
-            converted_num = num*3
-        
-        elif unit1 == 'yard' and unit2 == 'inch':
-            converted_num = num*36
-            
-        elif unit1 == 'inch' and unit2 == 'meter':
-            converted_num = num/39.37
-            
-        elif unit1 == 'inch' and unit2 == 'foot':
-            converted_num = num/12
-        
-        elif unit1 == 'inch' and unit2 == 'yard':
-            converted_num = num/36
-        
-        output.config(text=str(converted_num))
-    except:
-        output.config(text="Invalid")
+        tk.Label(container, text="Value").grid(row=0, column=0, sticky="w")
+        tk.Entry(container, textvariable=self.input_value, width=18).grid(
+            row=1, column=0, padx=(0, 8), pady=(4, 12)
+        )
 
-def Exit():
+        tk.Label(container, text="From").grid(row=0, column=1, sticky="w")
+        tk.OptionMenu(container, self.from_unit, *UNITS_IN_METERS).grid(
+            row=1, column=1, padx=8, pady=(4, 12), sticky="ew"
+        )
 
-    exit(0)
+        tk.Label(container, text="To").grid(row=0, column=2, sticky="w")
+        tk.OptionMenu(container, self.to_unit, *UNITS_IN_METERS).grid(
+            row=1, column=2, padx=(8, 0), pady=(4, 12), sticky="ew"
+        )
 
-b_convert = Button(root , text = "Convert",command = Convert)
-b_convert.grid(row=3, column=1)
+        tk.Label(container, text="Result").grid(row=2, column=0, sticky="w")
+        tk.Label(
+            container,
+            textvariable=self.output_value,
+            width=24,
+            anchor="w",
+            borderwidth=2,
+            relief="groove",
+            padx=8,
+            pady=6,
+        ).grid(row=3, column=0, columnspan=3, sticky="ew", pady=(4, 12))
 
-b_clear = Button(root, text="Clear" , command=Clear)
-b_clear.grid(row=3, column=2)
+        tk.Button(container, text="Convert", command=self.convert).grid(
+            row=4, column=0, sticky="ew", padx=(0, 8)
+        )
+        tk.Button(container, text="Clear", command=self.clear).grid(
+            row=4, column=1, sticky="ew", padx=8
+        )
+        tk.Button(container, text="Exit", command=self.root.destroy).grid(
+            row=4, column=2, sticky="ew", padx=(8, 0)
+        )
 
-b_exit = Button(root, text="Exit" , command=Exit)
-b_exit.grid(row=3, column=3)
+    def convert(self):
+        try:
+            result = convert_length(
+                self.input_value.get(), self.from_unit.get(), self.to_unit.get()
+            )
+        except ValueError:
+            messagebox.showerror("Invalid input", "Enter a valid numeric value.")
+            self.output_value.set("Invalid input")
+            return
 
-root.mainloop()
+        self.output_value.set(f"{result:.6g} {self.to_unit.get()}")
+
+    def clear(self):
+        self.input_value.set("")
+        self.output_value.set("—")
+
+
+def main():
+    root = tk.Tk()
+    UnitConverterApp(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
